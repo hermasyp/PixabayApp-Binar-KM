@@ -1,7 +1,8 @@
-package com.catnip.pixabayapp.services
+package com.catnip.pixabayapp.data.network.services
 
 import com.catnip.pixabayapp.BuildConfig
 import com.catnip.pixabayapp.model.SearchResponse
+import com.chuckerteam.chucker.api.ChuckerInterceptor
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
@@ -26,7 +27,7 @@ interface PixabayApiService {
         private const val TYPE_PHOTO = "photo"
 
         @JvmStatic
-        operator fun invoke(): PixabayApiService {
+        operator fun invoke(chukerInterceptor: ChuckerInterceptor): PixabayApiService {
             val authInterceptor = Interceptor {
                 val originRequest = it.request()
                 val oldUrl = originRequest.url
@@ -37,6 +38,7 @@ interface PixabayApiService {
             }
 
             val okHttpClient = OkHttpClient.Builder()
+                .addInterceptor(chukerInterceptor)
                 .addInterceptor(authInterceptor)
                 .connectTimeout(120, TimeUnit.SECONDS)
                 .readTimeout(120, TimeUnit.SECONDS)

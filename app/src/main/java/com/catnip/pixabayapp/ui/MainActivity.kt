@@ -3,12 +3,14 @@ package com.catnip.pixabayapp.ui
 import android.os.Bundle
 import android.view.Menu
 import android.widget.SearchView
-import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.catnip.pixabayapp.R
 import com.catnip.pixabayapp.databinding.ActivityMainBinding
+import com.catnip.pixabayapp.provider.ServiceLocator
+import com.catnip.pixabayapp.utils.viewModelFactory
+import com.catnip.pixabayapp.wrapper.Resource
 
 class MainActivity : AppCompatActivity() {
 
@@ -16,7 +18,9 @@ class MainActivity : AppCompatActivity() {
         ActivityMainBinding.inflate(layoutInflater)
     }
 
-    private val viewModel: MainViewModel by viewModels()
+    private val viewModel: MainViewModel by viewModelFactory {
+        MainViewModel(ServiceLocator.provideRepository(applicationContext))
+    }
 
     private val adapter: PostAdapter by lazy {
         PostAdapter {
@@ -33,24 +37,35 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun observeData() {
-        viewModel.loadingState.observe(this) { isLoading ->
-            binding.pbPost.isVisible = isLoading
-            binding.rvPost.isVisible = !isLoading
-        }
-
-        viewModel.errorState.observe(this) { errorData ->
-            binding.tvError.isVisible = errorData.first
-            errorData.second?.message?.let {
-                binding.tvError.text = it
-            }
-        }
         viewModel.searchResult.observe(this) {
-            if (it.posts.isNullOrEmpty()) {
-                adapter.clearItems()
-                binding.tvError.isVisible = true
-                binding.tvError.text = getString(R.string.text_empty_state)
-            } else {
-                adapter.setItems(it.posts)
+            when (it) {
+                is Resource.Loading -> {
+                    binding.pbPost.isVisible = true
+                    binding.rvPost.isVisible = false
+                    binding.tvError.isVisible = false
+                }
+                is Resource.Error -> {
+                    adapter.clearItems()
+                    binding.pbPost.isVisible = false
+                    binding.rvPost.isVisible = false
+                    binding.tvError.isVisible = true
+                    it.exception?.message?.let { er ->
+                        binding.tvError.text = er
+                    }
+                }
+                is Resource.Empty -> {
+                    adapter.clearItems()
+                    binding.pbPost.isVisible = false
+                    binding.rvPost.isVisible = false
+                    binding.tvError.isVisible = true
+                    binding.tvError.text = getString(R.string.text_empty_state)
+                }
+                is Resource.Success -> {
+                    it.payload?.posts?.let { data -> adapter.setItems(data) }
+                    binding.pbPost.isVisible = false
+                    binding.rvPost.isVisible = true
+                    binding.tvError.isVisible = false
+                }
             }
         }
     }

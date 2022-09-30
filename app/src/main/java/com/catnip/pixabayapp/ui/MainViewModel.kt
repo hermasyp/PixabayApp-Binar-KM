@@ -3,8 +3,9 @@ package com.catnip.pixabayapp.ui
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.catnip.pixabayapp.data.repository.SearchRepository
 import com.catnip.pixabayapp.model.SearchResponse
-import com.catnip.pixabayapp.services.PixabayApiService
+import com.catnip.pixabayapp.wrapper.Resource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -12,32 +13,16 @@ import kotlinx.coroutines.launch
 Written with love by Muhammad Hermas Yuda Pamungkas
 Github : https://github.com/hermasyp
  **/
-class MainViewModel : ViewModel() {
+class MainViewModel(private val repository: SearchRepository) : ViewModel() {
 
-    private val apiService: PixabayApiService by lazy {
-        PixabayApiService.invoke()
-    }
-
-    val searchResult = MutableLiveData<SearchResponse>()
-    val loadingState = MutableLiveData<Boolean>()
-    val errorState = MutableLiveData<Pair<Boolean, Exception?>>()
+    val searchResult = MutableLiveData<Resource<SearchResponse>>()
 
     fun searchPost(query: String) {
-        loadingState.postValue(true)
-        errorState.postValue(Pair(false, null))
+        searchResult.postValue(Resource.Loading())
         viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val data = apiService.searchPhoto(query = query)
-                viewModelScope.launch(Dispatchers.Main) {
-                    searchResult.postValue(data)
-                    loadingState.postValue(false)
-                    errorState.postValue(Pair(false, null))
-                }
-            } catch (e: Exception) {
-                viewModelScope.launch(Dispatchers.Main) {
-                    loadingState.postValue(false)
-                    errorState.postValue(Pair(true, e))
-                }
+            val data = repository.searchPhoto(query)
+            viewModelScope.launch(Dispatchers.Main) {
+                searchResult.postValue(data)
             }
         }
     }
