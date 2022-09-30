@@ -14,27 +14,29 @@ Github : https://github.com/hermasyp
  **/
 class MainViewModel : ViewModel() {
 
-    private val apiService : PixabayApiService by lazy {
+    private val apiService: PixabayApiService by lazy {
         PixabayApiService.invoke()
     }
 
     val searchResult = MutableLiveData<SearchResponse>()
     val loadingState = MutableLiveData<Boolean>()
-    val errorState = MutableLiveData<Exception>()
+    val errorState = MutableLiveData<Pair<Boolean, Exception?>>()
 
     fun searchPost(query: String) {
         loadingState.postValue(true)
+        errorState.postValue(Pair(false, null))
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val data = apiService.searchPhoto(query = query)
                 viewModelScope.launch(Dispatchers.Main) {
                     searchResult.postValue(data)
                     loadingState.postValue(false)
+                    errorState.postValue(Pair(false, null))
                 }
             } catch (e: Exception) {
                 viewModelScope.launch(Dispatchers.Main) {
                     loadingState.postValue(false)
-                    errorState.postValue(e)
+                    errorState.postValue(Pair(true, e))
                 }
             }
         }
